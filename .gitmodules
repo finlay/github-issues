@@ -1,0 +1,3 @@
+[submodule "servant-github"]
+	path = servant-github
+	url = https://github.com/finlay/servant-github
