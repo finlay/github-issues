@@ -14,6 +14,7 @@ import Data.Text (Text)
 import Data.Time
 import qualified Data.Vector as Vector
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
 import Network.GitHub
@@ -34,18 +35,25 @@ instance ToField Bool where
     toField False = "F"
 instance ToField UTCTime where
     toField = BS.pack . show
+instance ToField UserLogin where
+    toField (UserLogin login) = Text.encodeUtf8 login
 instance ToNamedRecord Issue where
     toNamedRecord issue@Issue{..} 
         = namedRecord 
-            [ "number"   .= issueNumber
-            , "state"    .= issueState
-            , "title"    .= issueTitle
-            , "body"     .= issueBody
-            , "locked"   .= issueLocked
-            , "comments" .= issueComments
-            , "created"  .= issueCreated
-            , "updated"  .= issueUpdated
-            , "closed"   .= issueClosed
+            [ "number"    .= issueNumber
+            , "url"       .= issueUrl
+            , "state"     .= issueState
+            , "title"     .= issueTitle
+            , "body"      .= issueBody
+            , "user"      .= issueUser
+            , "assignee"  .= issueAssignee
+            , "milestone" .= (maybe "" milestoneTitle issueMilestone)
+            , "labels"    .= (Text.intercalate "," (map (\(Label n) -> n) issueLabels))
+            , "locked"    .= issueLocked
+            , "comments"  .= issueComments
+            , "created"   .= issueCreated
+            , "updated"   .= issueUpdated
+            , "closed"    .= issueClosed
             ]
 
 main :: IO()
@@ -60,7 +68,7 @@ main = do
 
     token  <- fmap fromString <$> lookupEnv "GITHUB_TOKEN"
         
-    result <- runGitHub (getIssues [("state", "all")] (repo !! 0) (repo !! 1)) token
+    result <- runGitHub (getIssues [("state", "all"), ("direction", "asc")] (repo !! 0) (repo !! 1)) token
     case result of
         Left e  ->  print e
         Right issues -> do 
